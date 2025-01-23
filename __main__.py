@@ -20,19 +20,6 @@ class ScoreboardReading:
     minutes: int
     seconds: int
 
-    def __eq__(self, value):
-        if not isinstance(value, ScoreboardReading):
-            return False
-        return (
-            self.away_foul == value.away_foul
-            and self.away_score == value.away_score
-            and self.home_foul == value.home_foul
-            and self.home_score == value.home_score
-            and self.period == value.period
-            and self.minutes == value.minutes
-            and self.seconds == value.seconds
-        )
-
 model = genai.GenerativeModel(
     "gemini-1.5-flash",
     system_instruction='''You are reading image of a scoreboard for a basketball game to extract data from it, including:
@@ -42,7 +29,7 @@ model = genai.GenerativeModel(
     away team number of fouls
     game period,
     minutes and seconds on the game clock
-    Set field to default value if you can't recognize any.'''
+    Set field to zero value if you can't recognize any.'''
 )
 config = genai.GenerationConfig(response_mime_type="application/json", response_schema=ScoreboardReading, temperature=0)
 
@@ -70,7 +57,7 @@ def run_vision(frame):
         {'mime_type': 'image/jpeg', 'data': base64.b64encode(jpg.tobytes()).decode('utf-8')},
         "extract data from this image"
     ], generation_config=config)
-    print(response.text)
+    print(f"model response: {response.text}")
 
     data_dict = json.loads(response.text)
     return ScoreboardReading(**data_dict)
@@ -93,53 +80,56 @@ while True:
             uno_content={}
             uno_content["Game Clock Minutes"]=current_reading.minutes
             uno_content["Game Clock Seconds"]=current_reading.seconds
-            if len(uno_content) != 0:
-                data = {
-                    "command": "SetOverlayContent",
-                    "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
-                    "content": uno_content
-                }
-                resp = requests.put(uno_control_url, headers=headers, json=data)
-                print(resp.json())
-                data = {
-                    "command": "ExecuteOverlayContentField",
-                    "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
-                    "fieldId":"Game Clock",
-                    "value":"reset"
-                }
-                resp = requests.put(uno_control_url, headers=headers, json=data)
-                print(resp.json())
-                is_clock_running = False
-    elif is_clock_running == False:
-        #update the clock, reset and play it
-        uno_content={}
-        uno_content["Game Clock Minutes"]=current_reading.minutes
-        uno_content["Game Clock Seconds"]=current_reading.seconds
-        if len(uno_content) != 0:
             data = {
                 "command": "SetOverlayContent",
                 "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
                 "content": uno_content
             }
+            print(f"update clock to {current_reading.minutes}:{current_reading.seconds}")
             resp = requests.put(uno_control_url, headers=headers, json=data)
-            print(resp.json())
+            print(resp.status_code)
             data = {
                 "command": "ExecuteOverlayContentField",
                 "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
                 "fieldId":"Game Clock",
                 "value":"reset"
             }
+            print(f"reset clock")
             resp = requests.put(uno_control_url, headers=headers, json=data)
-            print(resp.json())
-            data = {
-                "command": "ExecuteOverlayContentField",
-                "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
-                "fieldId":"Game Clock",
-                "value":"play"
-            }
-            resp = requests.put(uno_control_url, headers=headers, json=data)
-            print(resp.json())
-            is_clock_running = True
+            print(resp.status_code)
+            is_clock_running = False
+    elif is_clock_running == False:
+        #update the clock, reset and play it
+        uno_content={}
+        uno_content["Game Clock Minutes"]=current_reading.minutes
+        uno_content["Game Clock Seconds"]=current_reading.seconds
+        data = {
+            "command": "SetOverlayContent",
+            "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
+            "content": uno_content
+        }
+        print(f"update clock to {current_reading.minutes}:{current_reading.seconds}")
+        resp = requests.put(uno_control_url, headers=headers, json=data)
+        print(resp.status_code)
+        data = {
+            "command": "ExecuteOverlayContentField",
+            "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
+            "fieldId":"Game Clock",
+            "value":"reset"
+        }
+        print(f"reset clock")
+        resp = requests.put(uno_control_url, headers=headers, json=data)
+        print(resp.status_code)
+        data = {
+            "command": "ExecuteOverlayContentField",
+            "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
+            "fieldId":"Game Clock",
+            "value":"play"
+        }
+        print(f"play clock")
+        resp = requests.put(uno_control_url, headers=headers, json=data)
+        print(resp.status_code)
+        is_clock_running = True
     
     last_reading.minutes = current_reading.minutes
     last_reading.seconds = current_reading.seconds
@@ -160,13 +150,11 @@ while True:
         "id": "e30a3d91-6ab2-47a5-aa38-500ef2c5fbfc",
         "content": uno_content
     }
+    print("update non-clock values")
     resp = requests.put(uno_control_url, headers=headers, json=data)
-    print(resp.json())
+    print(resp.status_code)
 
     last_reading = current_reading
     time_to_sleep = 1 - (time.time() - start)
     if time_to_sleep > 0:
         time.sleep(time_to_sleep)
-    
-
-    
