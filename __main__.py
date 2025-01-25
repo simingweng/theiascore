@@ -49,8 +49,8 @@ def run_vision(frame):
     new_width = int(786 * aspect_ratio)
     frame = cv2.resize(frame, (new_width, 786))
 
-    # convert to grayscale to reduce network traffic
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # convert from BGR to RGB
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     _, jpg = cv2.imencode(".jpg", frame)
     response = model.generate_content([
