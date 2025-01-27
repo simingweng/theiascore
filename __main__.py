@@ -28,7 +28,9 @@ model = genai.GenerativeModel(
     away team score
     away team number of fouls
     game period,
-    minutes and seconds on the game clock
+    minutes and seconds on the game clock,
+    be careful, the game clock has two parts, the minute and second, time will be counting down,
+    but during the last minute of the game, the minute part will become the second, while the second part becomes tenth of second,
     Set field to zero value if you can't recognize any.'''
 )
 config = genai.GenerationConfig(response_mime_type="application/json", response_schema=ScoreboardReading, temperature=0)
@@ -62,8 +64,28 @@ def run_vision(frame):
     data_dict = json.loads(response.text)
     return ScoreboardReading(**data_dict)
 
+def cleanup(new: ScoreboardReading, old: ScoreboardReading):
+        if abs(new.away_score - old.away_score) > 3:
+            new.away_score = old.away_score
+        if abs(new.home_score - old.home_score) > 3:
+            new.home_score = old.home_score
+        if abs(new.home_foul - old.home_foul) > 1:
+            new.home_foul = old.home_foul
+        if abs(new.away_foul - old.away_foul) > 1:
+            new.away_foul = old.away_foul
+        if abs(new.period - old.period) > 1:
+            new.period = old.period
+
+        if is_last_minute:
+            new.seconds = new.minutes
+            new.minutes = 0
+            return new.minutes == 0 and new.seconds == 0
+        else:
+            return old.minutes == 1 and new.minutes > 8
+
 last_reading = ScoreboardReading(home_foul=0, home_score=0, away_foul=0, away_score=0, period=0, minutes=0, seconds=0)
 is_clock_running = False
+is_last_minute = False
 uno_control_url = 'https://app.overlays.uno/apiv2/controlapps/6XfLW0GSrlU20FtxwyIL0h/api'
 headers = {'Content-Type': 'application/json'}
 while True:
@@ -73,6 +95,7 @@ while True:
         break
 
     current_reading = run_vision(frame)
+    is_last_minute = cleanup(current_reading, last_reading)
 
     if current_reading.minutes == last_reading.minutes and current_reading.seconds == last_reading.seconds:
         if is_clock_running == True:
