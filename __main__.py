@@ -65,21 +65,21 @@ def run_vision(frame):
     return ScoreboardReading(**data_dict)
 
 def cleanup(new: ScoreboardReading, old: ScoreboardReading):
-        if abs(new.away_score - old.away_score) > 3:
+        if old.away_score != 0 and new.away_score !=0 and abs(new.away_score - old.away_score) > 3:
             new.away_score = old.away_score
-        if abs(new.home_score - old.home_score) > 3:
+        if old.home_score != 0 and new.home_score != 0 and abs(new.home_score - old.home_score) > 3:
             new.home_score = old.home_score
-        if abs(new.home_foul - old.home_foul) > 1:
+        if old.home_foul != 0 and new.home_foul != 0 and abs(new.home_foul - old.home_foul) > 1:
             new.home_foul = old.home_foul
-        if abs(new.away_foul - old.away_foul) > 1:
+        if old.away_foul != 0 and new.away_foul != 0 and abs(new.away_foul - old.away_foul) > 1:
             new.away_foul = old.away_foul
-        if abs(new.period - old.period) > 1:
+        if old.period != 0 and new.period != 0 and abs(new.period - old.period) > 1:
             new.period = old.period
 
         if is_last_minute:
             new.seconds = new.minutes
             new.minutes = 0
-            return new.minutes == 0 and new.seconds == 0
+            return new.seconds != 0
         else:
             return old.minutes == 1 and new.minutes > 8
 
