@@ -29,8 +29,6 @@ model = genai.GenerativeModel(
     away team number of fouls
     game period,
     minutes and seconds on the game clock,
-    be careful, the game clock has two parts, the minute and second, time will be counting down,
-    but during the last minute of the game, the minute part will become the second, while the second part becomes tenth of second,
     Set field to zero value if you can't recognize any.'''
 )
 config = genai.GenerationConfig(response_mime_type="application/json", response_schema=ScoreboardReading, temperature=0)
